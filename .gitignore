@@ -36,3 +36,6 @@ Thumbs.db
 # Local test or note files
 txt.md
 hedera-ticketing-app@0.1.0
+
+# Legacy README files
+README_TICKETING.md

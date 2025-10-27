@@ -1,4 +1,4 @@
-# 🎟️ Hedera Event Ticketing Platform
+# 🎟️ EventHive
 
 A decentralized event ticketing platform built on Hedera Hashgraph using React, TypeScript, and Reown wallet connection.
 
@@ -175,4 +175,4 @@ MIT License - see LICENSE file for details
 ---
 
 Built with ❤️ on Hedera Hashgraph
-# Event-Ticketing-on-Hedera-New
+# EventHive
