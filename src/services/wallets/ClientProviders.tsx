@@ -238,7 +238,7 @@ export function ClientProviders({ children }: ClientProvidersProps) {
     return <LoadingSpinner />
   }
 
-  const isConnected = Boolean(userAccountId && sessionTopic && dAppConnector?.signers?.length > 0)
+  const isConnected = Boolean(userAccountId && sessionTopic && dAppConnector?.signers && dAppConnector.signers.length > 0)
   console.log('🔄 Connection status:', {
     userAccountId,
     sessionTopic,
