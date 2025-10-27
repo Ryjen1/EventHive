@@ -1,0 +1,174 @@
+import React, { createContext, useContext, useEffect, useState } from 'react'
+import { HashConnect, HashConnectTypes, MessageTypes } from 'hashconnect'
+
+interface HashpackState {
+  connected: boolean
+  accountId: string | null
+  isConnecting: boolean
+  hashConnect: HashConnect | null
+  connect: () => Promise<void>
+  disconnect: () => Promise<void>
+  signTransaction: (transactionBytes: Uint8Array) => Promise<Uint8Array>
+}
+
+const HashpackContext = createContext<HashpackState | undefined>(undefined)
+
+export const HashpackProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [connected, setConnected] = useState(false)
+  const [accountId, setAccountId] = useState<string | null>(null)
+  const [isConnecting, setIsConnecting] = useState(false)
+  const [hashpack, setHashpack] = useState<any | null>(null)
+
+  useEffect(() => {
+    checkForHashPack()
+  }, [])
+
+  const checkForHashPack = async () => {
+    console.log('🔍 Checking for HashPack extension...')
+    try {
+      const hashpackInstance = await waitForHashPack(5000, 200)
+      if (hashpackInstance) {
+        console.log('✅ HashPack instance found:', hashpackInstance)
+        setHashpack(hashpackInstance)
+        
+        // Check for existing connection
+        if (typeof hashpackInstance.getConnectionState === 'function') {
+          try {
+            const connectionState = await hashpackInstance.getConnectionState()
+            console.log('📋 Connection state:', connectionState)
+            if (connectionState && connectionState.accountIds && connectionState.accountIds.length > 0) {
+              setAccountId(connectionState.accountIds[0])
+              setConnected(true)
+              console.log('✅ Found existing HashPack connection:', connectionState.accountIds[0])
+            }
+          } catch (error) {
+            console.log('No existing HashPack connection')
+          }
+        }
+      }
+    } catch (error) {
+      console.log('HashPack not available')
+    }
+  }
+
+  const connect = async () => {
+    // Try to detect HashPack again before connecting
+    if (!hashpack) {
+      console.log('🔍 HashPack not detected, trying to find it...')
+      const foundHashpack = await waitForHashPack(3000, 200)
+      if (foundHashpack) {
+        setHashpack(foundHashpack)
+      } else {
+        // HashPack not available - show user-friendly message
+        const installHashPack = window.confirm(
+          'HashPack wallet extension is required to connect to Hedera.\n\n' +
+          'Would you like to install HashPack now?'
+        )
+        
+        if (installHashPack) {
+          window.open('https://www.hashpack.app/download', '_blank')
+        }
+        return
+      }
+    }
+
+    setIsConnecting(true)
+    try {
+      console.log('🔗 Attempting to connect with HashPack...', hashpack)
+      
+      let connectionData = null
+      
+      // Try different connection methods
+      if (typeof hashpack.connectToLocalWallet === 'function') {
+        console.log('📞 Using connectToLocalWallet method')
+        connectionData = await hashpack.connectToLocalWallet()
+      } else if (typeof hashpack.requestAccountInfo === 'function') {
+        console.log('📞 Using requestAccountInfo method')
+        connectionData = await hashpack.requestAccountInfo()
+      } else if (typeof hashpack.connect === 'function') {
+        console.log('📞 Using connect method')
+        connectionData = await hashpack.connect()
+      } else {
+        console.log('🔍 Available methods on hashpack:', Object.getOwnPropertyNames(hashpack))
+        throw new Error('No compatible connection method found in HashPack')
+      }
+      
+      console.log('📋 Connection data received:', connectionData)
+      
+      if (connectionData && connectionData.accountIds && connectionData.accountIds.length > 0) {
+        setAccountId(connectionData.accountIds[0])
+        setConnected(true)
+        console.log('🎉 HashPack connected successfully:', connectionData.accountIds[0])
+        
+        // Show success message
+        alert('🎉 HashPack wallet connected successfully!')
+      } else {
+        throw new Error('No accounts found in HashPack response')
+      }
+    } catch (error) {
+      console.error('HashPack connection failed:', error)
+      
+      // Show user-friendly error message
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      alert(`❌ Failed to connect to HashPack:\n\n${errorMessage}\n\nPlease make sure HashPack is unlocked and try again.`)
+    } finally {
+      setIsConnecting(false)
+    }
+  }
+
+  const disconnect = async () => {
+    try {
+      if (hashpack && hashpack.disconnect) {
+        await hashpack.disconnect()
+      }
+      setConnected(false)
+      setAccountId(null)
+      console.log('🔌 HashPack disconnected')
+    } catch (error) {
+      console.error('HashPack disconnect failed:', error)
+    }
+  }
+
+  const signTransaction = async (transactionBytes: Uint8Array): Promise<Uint8Array> => {
+    if (!hashpack || !connected || !accountId) {
+      throw new Error('HashPack not connected')
+    }
+
+    try {
+      // Use HashPack's signing API
+      const signResponse = await hashpack.sign(transactionBytes, accountId)
+      
+      console.log('✅ Transaction signed successfully')
+      
+      // Return the signed transaction bytes
+      return signResponse.signedTransaction || transactionBytes
+    } catch (error) {
+      console.error('Transaction signing failed:', error)
+      throw error
+    }
+  }
+
+  const value: HashpackState = {
+    connected,
+    accountId,
+    isConnecting,
+    hashpack,
+    signTransaction,
+    connect,
+    disconnect
+  }
+
+  return (
+    <HashpackContext.Provider value={value}>
+      {children}
+    </HashpackContext.Provider>
+  )
+}
+
+export const useHashpack = () => {
+  const context = useContext(HashpackContext)
+  if (!context) {
+    throw new Error('useHashpack must be used within HashpackProvider')
+  }
+  return context
+}
