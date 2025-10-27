@@ -17,16 +17,23 @@ import { useDAppConnector } from './ClientProviders';
 import { WalletInterface, NFTCreateOptions, NFTMintOptions } from './walletInterface';
 
 class BasicWalletInterface implements WalletInterface {
-  constructor(private _dAppConnector: any) {}
+  constructor(private _dAppConnector: any) {
+    if (!this._dAppConnector) {
+      throw new Error('DAppConnector is required');
+    }
+  }
 
   async createFile(data: Uint8Array): Promise<FileId> {
+    console.log('🔄 BasicWalletInterface.createFile called');
     if (!this._dAppConnector || !this._dAppConnector.signers?.[0]) {
+      console.log('❌ No DAppConnector or signers available');
       throw new Error('Wallet not connected');
     }
 
     try {
       const signer = this._dAppConnector.signers[0];
       const accountId = signer.getAccountId();
+      console.log('🔄 Creating file with signer:', accountId.toString());
 
       // Create client for testnet
       const client = Client.forTestnet();
@@ -97,13 +104,16 @@ class BasicWalletInterface implements WalletInterface {
   }
 
   async mintNFT(options: NFTMintOptions): Promise<TransactionId> {
+    console.log('🔄 BasicWalletInterface.mintNFT called for token:', options.tokenId.toString());
     if (!this._dAppConnector || !this._dAppConnector.signers?.[0]) {
+      console.log('❌ No DAppConnector or signers available');
       throw new Error('Wallet not connected');
     }
 
     try {
       const signer = this._dAppConnector.signers[0];
       const accountId = signer.getAccountId();
+      console.log('🔄 Minting NFT with signer:', accountId.toString());
 
       // Create client for testnet
       const client = Client.forTestnet();
@@ -125,7 +135,8 @@ class BasicWalletInterface implements WalletInterface {
       await client.close();
       return response.transactionId;
     } catch (error) {
-      console.error('Error minting NFT:', error);
+      console.error('❌ Error minting NFT:', error);
+      console.error('❌ Error details:', error instanceof Error ? error.message : 'Unknown error');
       throw new Error(`Failed to mint NFT on Hedera: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -206,19 +217,26 @@ export const useWalletInterface = () => {
   }, [userAccountId]);
 
   const walletInterface = useMemo(() => {
-    if (dAppConnector && isConnected) {
+    if (dAppConnector && isConnected && userAccountId) {
       try {
-        // Try to use the real wallet interface first
-        return new BasicWalletInterface(dAppConnector);
+        // Check if we have active signers
+        if (dAppConnector.signers && dAppConnector.signers.length > 0) {
+          console.log('🔗 Using real wallet interface with connected wallet');
+          console.log('🔗 Available signers:', dAppConnector.signers.length);
+          console.log('🔗 Account ID:', userAccountId);
+          return new BasicWalletInterface(dAppConnector);
+        } else {
+          console.log('⚠️ No active signers found, using mock interface');
+          return new MockWalletInterface();
+        }
       } catch (error) {
-        console.warn('Real wallet interface failed, falling back to mock:', error);
-        // Fall back to mock interface for development
+        console.warn('❌ Real wallet interface failed, falling back to mock:', error);
         return new MockWalletInterface();
       }
     }
-    // Return mock interface even when not connected for development
+    console.log('📱 No wallet connected, using mock interface for development');
     return new MockWalletInterface();
-  }, [dAppConnector, isConnected]);
+  }, [dAppConnector, isConnected, userAccountId]);
 
   return { accountId, walletInterface };
 };
@@ -240,9 +258,16 @@ class MockWalletInterface implements WalletInterface {
   }
 
   async mintNFT(options: NFTMintOptions): Promise<TransactionId> {
-    console.log('Mock: Minting NFT for token:', options.tokenId.toString());
+    console.log('🎭 Mock: Minting NFT for token:', options.tokenId.toString());
+
+    // Simulate network delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
     // Generate a mock transaction ID
     const mockTxId = `0.0.${1000000 + Math.floor(Math.random() * 9000000)}@${Math.floor(Date.now() / 1000)}.${Math.floor(Math.random() * 1000)}`;
+
+    console.log('🎭 Mock: NFT minted successfully with transaction:', mockTxId);
+
     return TransactionId.fromString(mockTxId);
   }
 

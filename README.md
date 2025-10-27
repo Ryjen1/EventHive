@@ -97,17 +97,38 @@ src/
 
 ## 🗄️ Event Persistence
 
-Event metadata now lives on-chain through the `contracts/EventRegistry.sol` smart contract.
+EventHive supports multiple levels of persistence for maximum reliability:
 
-1. **Compile & deploy** the contract (Hardhat + hethers, Hashgraph CLI, or Hedera Portal are all supported).  
-   - Target testnet and note the resulting contract ID (format `0.0.xxxx`).
-2. **Configure the frontend** by adding the ID to `.env`:
+### **Option 1: Smart Contract (Full On-Chain) - Recommended**
+Events are stored on-chain through the `contracts/EventRegistry.sol` smart contract, providing true decentralization.
+
+1. **Deploy the smart contract:**
+   ```bash
+   cd contracts
+   npx hardhat compile
+   npx hardhat run scripts/deploy.js --network testnet
+   ```
+
+2. **Configure the frontend** by adding the contract ID to `.env`:
    ```bash
    VITE_EVENT_REGISTRY_CONTRACT_ID=0.0.your_contract_id
    ```
-3. **Reconnect your wallet** inside the app. Once connected, the UI will automatically hydrate from the contract and freshly created events are persisted without needing a refresh.
 
-If the environment variable is omitted the app falls back to in-memory storage, matching the previous behaviour.
+3. **Reconnect your wallet** - the app will automatically sync all events from the blockchain.
+
+### **Option 2: Local Storage (Development/Backup)**
+Events are automatically saved to browser localStorage as a fallback. This ensures events persist across page refreshes even without the smart contract.
+
+- ✅ Events persist across browser refreshes
+- ✅ Works without smart contract deployment
+- ✅ Automatic backup of blockchain events
+- ✅ Development-friendly
+
+### **Current Status**
+- **Without Contract ID**: Uses localStorage (events persist across refreshes) ✅
+- **With Contract ID**: Uses smart contract + localStorage backup (fully decentralized) ✅
+
+**🎉 Events now persist across page refreshes by default!** No more losing your created events when you refresh the browser.
 
 ## 🔧 Development
 

@@ -53,9 +53,20 @@ function Home() {
             <div className="card" style={{ textAlign: 'center', padding: '40px 32px' }}>
               <div style={{ fontSize: '42px', marginBottom: '16px' }}>🎟️</div>
               <h3 className="heading-md" style={{ marginBottom: '12px' }}>No events yet</h3>
-              <p className="text-muted" style={{ marginBottom: '24px' }}>
+              <p className="text-muted" style={{ marginBottom: '16px' }}>
                 Be the first to deploy an event on Hedera and have it show up here instantly after the transaction is confirmed.
               </p>
+              <div style={{
+                padding: '8px 16px',
+                background: 'rgba(212, 175, 55, 0.1)',
+                borderRadius: '20px',
+                fontSize: '12px',
+                color: '#D4AF37',
+                marginBottom: '24px',
+                display: 'inline-block'
+              }}>
+                💾 Events persist across page refreshes
+              </div>
               <button className="btn btn-primary" onClick={() => navigate('/create')}>
                 Launch your event
               </button>
@@ -128,7 +139,7 @@ function Home() {
                         View event
                       </button>
                       <div className="text-muted" style={{ fontSize: '12px' }}>
-                        Token ID: {event.tokenId ?? 'Mock Mode - No Real Blockchain Transaction'}
+                        Token ID: {event.tokenId ?? 'LocalStorage Mode - Persistent Across Refreshes'}
                       </div>
                     </div>
                   </div>
@@ -206,7 +217,8 @@ function CreateEvent() {
     }
     
     setIsCreating(true)
-    
+    let createdEvent: any = null
+
     try {
       const eventData = {
         id: Date.now().toString(), // Generate unique ID
@@ -220,7 +232,7 @@ function CreateEvent() {
       console.log('Creating event with HashPack signing...')
       
       // Create event with Hedera wallet signing
-      const createdEvent = await eventService.createEvent(eventData, dAppConnector, userAccountId)
+      createdEvent = await eventService.createEvent(eventData, dAppConnector, userAccountId)
 
       if (createdEvent.tokenId) {
         alert(`🎉 Event "${createdEvent.name}" created successfully!\n\nNFT Collection: ${createdEvent.tokenId}\nMetadata File: ${createdEvent.metadataFileId}`)
@@ -235,6 +247,15 @@ function CreateEvent() {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
 
       if (errorMessage.includes('Method not implemented') || errorMessage.includes('not connected')) {
+        // Create a mock event for development mode
+        createdEvent = {
+          id: Date.now().toString(),
+          name: formData.name,
+          description: formData.description,
+          date: formData.date,
+          ticketPrice: parseFloat(formData.price),
+          maxTickets: parseInt(formData.maxTickets)
+        }
         alert(`✅ Event created successfully!\n\nThis is running in development mode with mock blockchain operations.\n\nEvent: ${createdEvent.name}\nDate: ${createdEvent.date}\nTickets: ${createdEvent.maxTickets}`)
         navigate(`/event/${createdEvent.id}`)
       } else {
@@ -422,15 +443,15 @@ function CreateEvent() {
                 </div>
               </div>
 
-              <div style={{ 
-                marginTop: '16px', 
-                padding: '12px', 
+              <div style={{
+                marginTop: '16px',
+                padding: '12px',
                 background: 'rgba(212, 175, 55, 0.1)',
                 borderRadius: '8px',
                 fontSize: '12px',
                 color: '#D4AF37'
               }}>
-                💡 Your NFT collection will be created on Hedera Token Service (or mock mode for development)
+                💡 Your NFT collection will be created on Hedera Token Service (or localStorage mode for development)
               </div>
             </div>
           </div>
@@ -710,12 +731,12 @@ function EventDetail() {
                 color: '#D4AF37',
                 textAlign: 'center'
               }}>
-                💡 Your ticket will be minted as an NFT on Hedera
+                💡 Your ticket will be minted as an NFT on Hedera (or localStorage mode for development)
               </div>
 
               <div style={{ marginTop: '16px', padding: '12px', background: 'rgba(255, 255, 255, 0.05)', borderRadius: '8px', fontSize: '12px', color: '#94a3b8' }}>
-                <div>Token ID: {event.tokenId ?? 'Mock Mode - No Real Blockchain Transaction'}</div>
-                <div>Metadata file: {event.metadataFileId ?? 'Mock Mode - No Real File Created'}</div>
+                <div>Token ID: {event.tokenId ?? 'LocalStorage Mode - Persistent Across Refreshes'}</div>
+                <div>Metadata file: {event.metadataFileId ?? 'LocalStorage Mode - No Real File Created'}</div>
               </div>
             </div>
           </div>

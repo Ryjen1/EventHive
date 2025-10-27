@@ -63,7 +63,7 @@ const queryClient = new QueryClient()
 const metadata = {
   name: 'EventHive',
   description: 'Decentralized event ticketing platform on Hedera',
-  url: 'https://hedera.com',
+  url: window.location.origin, // Use the actual app URL instead of hardcoded URL
   icons: ['https://avatars.githubusercontent.com/u/179229932']
 }
 
@@ -111,10 +111,13 @@ export function ClientProviders({ children }: ClientProvidersProps) {
 
     const connectorWithEvents = dAppConnector as DAppConnectorWithEvents
     const subscription = connectorWithEvents.events$?.subscribe((event: WalletEvent) => {
-      console.log('Wallet event:', event)
-      
+      console.log('🔄 Wallet event:', event)
+      console.log('🔄 Available signers at event time:', dAppConnector.signers?.length || 0)
+
       if (event.name === 'accountsChanged' || event.name === 'chainChanged') {
+        console.log('🔄 Available signers:', dAppConnector.signers?.length || 0);
         const accountId = dAppConnector.signers?.[0]?.getAccountId().toString() ?? null
+        console.log('🔄 Account ID from signer:', accountId);
         setUserAccountId(accountId)
         
         if (event.data && event.data.topic) {
@@ -131,11 +134,17 @@ export function ClientProviders({ children }: ClientProvidersProps) {
     })
 
     // Set initial state
+    console.log('🔄 Setting initial wallet state');
+    console.log('🔄 Initial signers available:', dAppConnector.signers?.length || 0);
     const initialAccountId = dAppConnector.signers?.[0]?.getAccountId().toString() ?? null
+    console.log('🔄 Initial account ID:', initialAccountId);
     setUserAccountId(initialAccountId)
-    
+
     if (dAppConnector.signers?.[0]?.topic) {
+      console.log('🔄 Initial session topic:', dAppConnector.signers[0].topic);
       setSessionTopic(dAppConnector.signers[0].topic)
+    } else {
+      console.log('🔄 No initial session topic found');
     }
     
     return () => subscription && subscription.unsubscribe()
@@ -194,6 +203,20 @@ export function ClientProviders({ children }: ClientProvidersProps) {
           setDAppConnector(connector)
           setIsReady(true)
           console.log('✅ Hedera DApp Connector initialized successfully')
+          console.log('🔄 Checking for existing wallet connections...')
+
+          // Check if there are already connected signers
+          if (connector.signers && connector.signers.length > 0) {
+            console.log('✅ Found existing wallet connection with', connector.signers.length, 'signers')
+            const accountId = connector.signers[0].getAccountId().toString()
+            console.log('✅ Connected account:', accountId)
+            setUserAccountId(accountId)
+            if (connector.signers[0].topic) {
+              setSessionTopic(connector.signers[0].topic)
+            }
+          } else {
+            console.log('📱 No existing wallet connections found')
+          }
         }
       } catch (error) {
         console.warn('⚠️ DApp Connector initialization failed:', error)
@@ -215,7 +238,13 @@ export function ClientProviders({ children }: ClientProvidersProps) {
     return <LoadingSpinner />
   }
 
-  const isConnected = Boolean(userAccountId && sessionTopic)
+  const isConnected = Boolean(userAccountId && sessionTopic && dAppConnector?.signers?.length > 0)
+  console.log('🔄 Connection status:', {
+    userAccountId,
+    sessionTopic,
+    signersCount: dAppConnector?.signers?.length || 0,
+    isConnected
+  })
 
   return (
     <DAppConnectorContext.Provider

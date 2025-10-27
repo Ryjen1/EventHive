@@ -1,4 +1,4 @@
-# Hedera Event Ticketing Platform
+# 🎟️ EventHive
 
 A fully decentralized event ticketing platform built on the Hedera Network using React, TypeScript, and the Hedera SDK. This platform enables users to create events and sell blockchain-powered NFT tickets with fraud-proof security.
 
@@ -238,4 +238,4 @@ For technical questions or issues:
 
 ---
 
-**Built with ❤️ on Hedera - The most used, sustainable, enterprise-grade public network for the decentralized economy.**
+**Built with ❤️ on Hedera Hashgraph • Decentralized Event Ticketing**
