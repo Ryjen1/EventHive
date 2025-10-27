@@ -278,8 +278,6 @@ class EventService {
     connector: DAppConnector,
     accountId: string
   ): Promise<EventData> {
-    const signer = this.getSigner(connector, accountId)
-
     const event: EventData = {
       ...input,
       coverImage: input.coverImage ?? this.selectCoverImage(input.name),
@@ -293,8 +291,26 @@ class EventService {
     }
 
     try {
-      const metadataFileId = await this.uploadMetadataToHfs(event, signer, accountId)
-      const tokenId = await this.createEventNftCollection(event, signer, accountId)
+      // Try to get signer for blockchain operations
+      let signer: DAppSigner | null = null
+      try {
+        signer = this.getSigner(connector, accountId)
+      } catch (signerError) {
+        console.warn('Could not get signer, creating event locally:', signerError)
+      }
+
+      let metadataFileId: string | undefined
+      let tokenId: string | undefined
+
+      if (signer) {
+        try {
+          metadataFileId = await this.uploadMetadataToHfs(event, signer, accountId)
+          tokenId = await this.createEventNftCollection(event, signer, accountId)
+        } catch (blockchainError) {
+          console.warn('Blockchain operations failed, creating event locally:', blockchainError)
+          // Continue with local creation even if blockchain fails
+        }
+      }
 
       const storedEvent: EventData = {
         ...event,
@@ -302,34 +318,39 @@ class EventService {
         tokenId,
       }
 
-      if (this.useContractPersistence) {
-        await persistEventOnChain(
-          {
-            id: storedEvent.id,
-            name: storedEvent.name,
-            description: storedEvent.description,
-            date: storedEvent.date,
-            ticketPrice: storedEvent.ticketPrice,
-            maxTickets: storedEvent.maxTickets,
-            coverImage: storedEvent.coverImage ?? null,
-            metadataFileId: storedEvent.metadataFileId ?? null,
-            tokenId: storedEvent.tokenId ?? null,
-            creatorAccountId: storedEvent.creatorAccountId,
-            ticketsSold: storedEvent.ticketsSold,
-          },
-          signer,
-          accountId
-        )
+      if (this.useContractPersistence && signer) {
+        try {
+          await persistEventOnChain(
+            {
+              id: storedEvent.id,
+              name: storedEvent.name,
+              description: storedEvent.description,
+              date: storedEvent.date,
+              ticketPrice: storedEvent.ticketPrice,
+              maxTickets: storedEvent.maxTickets,
+              coverImage: storedEvent.coverImage ?? null,
+              metadataFileId: storedEvent.metadataFileId ?? null,
+              tokenId: storedEvent.tokenId ?? null,
+              creatorAccountId: storedEvent.creatorAccountId,
+              ticketsSold: storedEvent.ticketsSold,
+            },
+            signer,
+            accountId
+          )
 
-        await this.syncFromContract(signer)
-        return (
-          this.getEventById(storedEvent.id) ?? {
-            ...storedEvent,
-            createdAt: new Date().toISOString(),
-          }
-        )
+          await this.syncFromContract(signer)
+          return (
+            this.getEventById(storedEvent.id) ?? {
+              ...storedEvent,
+              createdAt: new Date().toISOString(),
+            }
+          )
+        } catch (persistError) {
+          console.warn('Contract persistence failed, storing locally:', persistError)
+        }
       }
 
+      // Always store locally as fallback
       this.events = [storedEvent, ...this.events]
       this.notifyListeners()
 

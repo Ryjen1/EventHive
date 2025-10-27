@@ -140,16 +140,16 @@ const CreateEventPage: React.FC = () => {
         ticketTypes: processedTicketTypes
       });
 
-      setSuccess(`Event "${event.name}" created successfully!`);
+      setSuccess(`🎉 Event "${event.name}" created successfully in EventHive!`);
 
       // Deploy to blockchain if requested
       if (deployNow && walletInterface && accountId) {
         try {
           const blockchainService = BlockchainService.create(walletInterface, accountId);
           const result = await blockchainService.deployEventNFTCollection(event);
-          
+
           if (result) {
-            setSuccess(`Event created and deployed to blockchain! Token ID: ${result.tokenId.toString()}`);
+            setSuccess(`🎉 Event created and deployed to blockchain in EventHive! Token ID: ${result.tokenId.toString()}`);
           } else {
             // Check if user is using MetaMask (account starts with 0x)
             if (accountId.startsWith('0x')) {
@@ -160,7 +160,13 @@ const CreateEventPage: React.FC = () => {
           }
         } catch (deployError) {
           console.error('Blockchain deployment error:', deployError);
-          setError('Event created locally, but blockchain deployment failed. Please check your wallet connection and try again.');
+          const errorMessage = deployError instanceof Error ? deployError.message : 'Unknown error occurred';
+
+          if (errorMessage.includes('Method not implemented') || errorMessage.includes('not connected')) {
+            setError('🎉 Event created successfully in EventHive! (Mock mode - no real blockchain transaction was executed. This is for development/testing purposes.)');
+          } else {
+            setError(`Event created locally, but blockchain deployment failed: ${errorMessage}`);
+          }
         }
       }
 

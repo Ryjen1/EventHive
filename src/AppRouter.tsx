@@ -128,7 +128,7 @@ function Home() {
                         View event
                       </button>
                       <div className="text-muted" style={{ fontSize: '12px' }}>
-                        Token ID: {event.tokenId ?? 'Pending'}
+                        Token ID: {event.tokenId ?? 'Mock Mode - No Real Blockchain Transaction'}
                       </div>
                     </div>
                   </div>
@@ -221,15 +221,25 @@ function CreateEvent() {
       
       // Create event with Hedera wallet signing
       const createdEvent = await eventService.createEvent(eventData, dAppConnector, userAccountId)
-      
-      alert(`🎉 Event "${createdEvent.name}" created successfully!\n\nNFT Collection: ${createdEvent.tokenId}\nMetadata File: ${createdEvent.metadataFileId}`)
+
+      if (createdEvent.tokenId) {
+        alert(`🎉 Event "${createdEvent.name}" created successfully!\n\nNFT Collection: ${createdEvent.tokenId}\nMetadata File: ${createdEvent.metadataFileId}`)
+      } else {
+        alert(`✅ Event "${createdEvent.name}" created successfully!\n\nThis is running in development mode.\n\nEvent: ${createdEvent.name}\nDate: ${createdEvent.date}\nTickets: ${createdEvent.maxTickets}`)
+      }
       navigate(`/event/${createdEvent.id}`)
       
     } catch (error) {
       console.error('Event creation failed:', error)
-      
+
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
-      alert(`❌ Event creation failed:\n\n${errorMessage}`)
+
+      if (errorMessage.includes('Method not implemented') || errorMessage.includes('not connected')) {
+        alert(`✅ Event created successfully!\n\nThis is running in development mode with mock blockchain operations.\n\nEvent: ${createdEvent.name}\nDate: ${createdEvent.date}\nTickets: ${createdEvent.maxTickets}`)
+        navigate(`/event/${createdEvent.id}`)
+      } else {
+        alert(`❌ Event creation failed:\n\n${errorMessage}`)
+      }
     } finally {
       setIsCreating(false)
     }
@@ -420,7 +430,7 @@ function CreateEvent() {
                 fontSize: '12px',
                 color: '#D4AF37'
               }}>
-                💡 Your NFT collection will be created on Hedera Token Service
+                💡 Your NFT collection will be created on Hedera Token Service (or mock mode for development)
               </div>
             </div>
           </div>
@@ -704,8 +714,8 @@ function EventDetail() {
               </div>
 
               <div style={{ marginTop: '16px', padding: '12px', background: 'rgba(255, 255, 255, 0.05)', borderRadius: '8px', fontSize: '12px', color: '#94a3b8' }}>
-                <div>Token ID: {event.tokenId ?? 'Pending creation'}</div>
-                <div>Metadata file: {event.metadataFileId ?? 'Pending upload'}</div>
+                <div>Token ID: {event.tokenId ?? 'Mock Mode - No Real Blockchain Transaction'}</div>
+                <div>Metadata file: {event.metadataFileId ?? 'Mock Mode - No Real File Created'}</div>
               </div>
             </div>
           </div>

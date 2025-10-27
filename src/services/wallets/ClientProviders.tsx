@@ -61,7 +61,7 @@ const projectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID ?? ''
 const queryClient = new QueryClient()
 
 const metadata = {
-  name: 'Hedera Event Ticketing',
+  name: 'EventHive',
   description: 'Decentralized event ticketing platform on Hedera',
   url: 'https://hedera.com',
   icons: ['https://avatars.githubusercontent.com/u/179229932']
