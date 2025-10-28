@@ -206,21 +206,23 @@ function CreateEvent() {
     }
     
     setIsCreating(true)
-    
+
+    const eventData = {
+      id: Date.now().toString(), // Generate unique ID
+      name: formData.name,
+      description: formData.description,
+      date: formData.date,
+      ticketPrice: parseFloat(formData.price),
+      maxTickets: parseInt(formData.maxTickets)
+    }
+
+    let createdEvent: any = null
+
     try {
-      const eventData = {
-        id: Date.now().toString(), // Generate unique ID
-        name: formData.name,
-        description: formData.description,
-        date: formData.date,
-        ticketPrice: parseFloat(formData.price),
-        maxTickets: parseInt(formData.maxTickets)
-      }
-      
       console.log('Creating event with HashPack signing...')
-      
+
       // Create event with Hedera wallet signing
-      const createdEvent = await eventService.createEvent(eventData, dAppConnector, userAccountId)
+      createdEvent = await eventService.createEvent(eventData, dAppConnector, userAccountId)
 
       if (createdEvent.tokenId) {
         alert(`🎉 Event "${createdEvent.name}" created successfully!\n\nNFT Collection: ${createdEvent.tokenId}\nMetadata File: ${createdEvent.metadataFileId}`)
@@ -228,13 +230,14 @@ function CreateEvent() {
         alert(`✅ Event "${createdEvent.name}" created successfully!\n\nThis is running in development mode.\n\nEvent: ${createdEvent.name}\nDate: ${createdEvent.date}\nTickets: ${createdEvent.maxTickets}`)
       }
       navigate(`/event/${createdEvent.id}`)
-      
+
     } catch (error) {
       console.error('Event creation failed:', error)
 
       const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred'
 
       if (errorMessage.includes('Method not implemented') || errorMessage.includes('not connected')) {
+        createdEvent = eventData // mock mode
         alert(`✅ Event created successfully!\n\nThis is running in development mode with mock blockchain operations.\n\nEvent: ${createdEvent.name}\nDate: ${createdEvent.date}\nTickets: ${createdEvent.maxTickets}`)
         navigate(`/event/${createdEvent.id}`)
       } else {
